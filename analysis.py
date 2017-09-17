@@ -4,6 +4,7 @@ import statistics
 import json
 import numpy as np
 import random 
+from tqdm import tqdm
 from smart_open import smart_open
 
 def get_cf():
@@ -18,25 +19,22 @@ def analysis(input, proficiency):
     eff_ch2co = {}
     eff_co2ch = {}
     
-    for line in input:
-        try:
-            code, char = line.strip().split(' ', maxsplit=1)
+    for line in tqdm(input):
+        code, char, *_ = line.strip('\n').split()
 
-            if code not in co2ch:
-                eff_code = code
-            else:
-                n = 1
-                while True:
-                    eff_code = f"{code}{n}"
-                    if eff_code not in eff_co2ch:
-                        break
-                    n += 1
+        if code not in co2ch:
+            eff_code = code
+        else:
+            n = 1
+            while True:
+                eff_code = f"{code}{n}"
+                if eff_code not in eff_co2ch:
+                    break
+                n += 1
 
-            co2ch[code].append(char)
-            ch2co[char].append(eff_code)
+        co2ch[code].append(char)
+        ch2co[char].append(eff_code)
 
-        except Exception:
-            pass
 
     for char, codes in ch2co.items():
         if len(codes) == 1:
@@ -86,12 +84,14 @@ def evaluate(ch2co, co2ch, eff_ch2co, eff_co2ch, cf=None):
 
     print( "總字數  ", len(ch2co) )
     print( "總編碼數", len(co2ch) )
-    
-    code_mchar = [ (code, chars) for code, chars in co2ch.items() if len(chars) > 1]
-    char_mcode = [ (char, codes) for char, codes in ch2co.items() if len(codes) > 1]
 
-    print( "一碼多字(重碼字)   {:6d} {:6.2%}".format(len(code_mchar), len(code_mchar) / len(co2ch)))
-    print( "一字多碼(多種拆法) {:6d} {:6.2%}".format(len(char_mcode), len(char_mcode) / len(ch2co)))
+    #print(co2ch)
+    
+    code_mchar = sum( len(chars) for code, chars in co2ch.items() if len(chars) > 1 )
+    char_mcode = len([ (char, codes) for char, codes in ch2co.items() if len(codes) > 1])
+
+    print( "一碼多字(重碼字)   {:6d} {:6.2%}".format(code_mchar, code_mchar / len(ch2co)))
+    print( "一字多碼(多種拆法) {:6d} {:6.2%}".format(char_mcode, char_mcode / len(ch2co)))
 
     codelen = [ len(code) for char, code in eff_ch2co.items() ]
     codelen_avg = statistics.mean(codelen)
